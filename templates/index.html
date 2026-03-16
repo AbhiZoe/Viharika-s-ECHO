@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echo Mind</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="page-shell">
+        <header class="hero">
+            <div class="hero-content">
+                <p class="eyebrow">Voice Assistant Dashboard</p>
+                <h1>Echo Mind</h1>
+                <p class="hero-copy">A futuristic command center for live voice input, intelligent reasoning, and natural assistant responses.</p>
+            </div>
+            <div class="hero-actions">
+                <button id="settingsBtn" class="ghost-button" type="button" aria-label="Open settings">Settings</button>
+                <div class="status-panel">
+                    <span class="status-label">Status</span>
+                    <strong id="statusText">Idle</strong>
+                </div>
+            </div>
+        </header>
+
+        <main class="workspace">
+            <section class="conversation-card">
+                <div class="section-head">
+                    <h2>Conversation</h2>
+                    <button id="clearBtn" class="ghost-button" type="button">Clear</button>
+                </div>
+                <div id="conversation" class="conversation-log"></div>
+                <div id="thinking" class="thinking" hidden>
+                    <span></span><span></span><span></span>
+                </div>
+            </section>
+
+            <section class="control-card">
+                <div class="section-head">
+                    <h2>Command Center</h2>
+                    <span id="micSupport" class="support-pill">Checking mic...</span>
+                </div>
+
+                <div id="waveform" class="waveform" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span>
+                    <span></span><span></span><span></span><span></span><span></span>
+                </div>
+
+                <form id="commandForm" class="command-form">
+                    <textarea id="commandInput" rows="4" placeholder="Type a command or ask Echo Mind anything..."></textarea>
+                    <div class="action-row">
+                        <button id="sendBtn" class="primary-button" type="submit">Execute</button>
+                        <button id="micBtn" class="mic-button" type="button" aria-pressed="false">
+                            <span class="mic-icon">MIC</span>
+                            <span id="micBtnLabel">Start Listening</span>
+                        </button>
+                    </div>
+                </form>
+
+                <p class="helper-text">Press the mic button to start listening. Press it again to stop.</p>
+            </section>
+        </main>
+    </div>
+
+    <div id="settingsModal" class="modal" hidden>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+            <div class="section-head">
+                <h2 id="settingsTitle">Assistant Settings</h2>
+                <button id="closeSettingsBtn" class="ghost-button" type="button">Close</button>
+            </div>
+            <div class="settings-grid">
+                <label class="setting-row" for="sttMode">
+                    <span>Voice Input Mode</span>
+                    <select id="sttMode">
+                        <option value="browser">Browser microphone</option>
+                        <option value="backend">Backend microphone</option>
+                    </select>
+                </label>
+                <label class="setting-row" for="ttsMode">
+                    <span>Voice Output Mode</span>
+                    <select id="ttsMode">
+                        <option value="browser">Browser speech</option>
+                        <option value="backend">Backend speech</option>
+                    </select>
+                </label>
+                <label class="setting-row" for="apiHint">
+                    <span>API Key Notes</span>
+                    <input id="apiHint" type="text" value="Set GROQ_API_KEY and WEATHER_API_KEY in .env" readonly>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
