@@ -179,21 +179,35 @@ class EchoMindWindow(QMainWindow):
         status_row.addWidget(self.tts_label)
         left_layout.addLayout(status_row)
 
+        button_row = QHBoxLayout()
+        button_row.setSpacing(12)
+
         self.listen_button = QPushButton("Start Listening")
         self.listen_button.setObjectName("accentButton")
         self.listen_button.clicked.connect(self._toggle_listening)
-        left_layout.addWidget(self.listen_button)
+        button_row.addWidget(self.listen_button)
+
+        self.stop_speak_button = QPushButton("Stop Speaking")
+        self.stop_speak_button.setObjectName("stopSpeakButton")
+        self.stop_speak_button.clicked.connect(self._stop_speaking)
+        self.stop_speak_button.setEnabled(False)
+        button_row.addWidget(self.stop_speak_button)
+
+        left_layout.addLayout(button_row)
 
         self.transcript = QListWidget()
         self.transcript.setSpacing(12)
         left_layout.addWidget(self.transcript, 1)
 
         composer = QHBoxLayout()
+        composer.setSpacing(12)
         self.input_box = QTextEdit()
         self.input_box.setPlaceholderText("Type a message for Echo-Mind...")
-        self.input_box.setFixedHeight(92)
+        self.input_box.setFixedHeight(72)
         composer.addWidget(self.input_box, 1)
         send_button = QPushButton("Send")
+        send_button.setObjectName("accentButton")
+        send_button.setFixedWidth(90)
         send_button.clicked.connect(self._send_text)
         composer.addWidget(send_button)
         left_layout.addLayout(composer)
@@ -291,8 +305,13 @@ class EchoMindWindow(QMainWindow):
         dialog.saved.connect(lambda: self._append_system_message("Settings saved. Restart the app to reload API keys."))
         dialog.exec()
 
+    def _stop_speaking(self) -> None:
+        self.controller.stop_speaking()
+        self.stop_speak_button.setEnabled(False)
+
     def _set_status(self, text: str) -> None:
         self.status_chip.setText(text)
+        self.stop_speak_button.setEnabled(text == "Speaking")
 
     def _update_listening_state(self, active: bool) -> None:
         self.listen_button.setProperty("active", active)
@@ -303,10 +322,14 @@ class EchoMindWindow(QMainWindow):
 
     def _append_message(self, role: str, message: str) -> None:
         item = QListWidgetItem()
-        bubble = QLabel(message)
+        prefix = "Echo-Mind" if role == "assistant" else "You"
+        bubble = QLabel(f"<b>{prefix}:</b>  {message}")
         bubble.setWordWrap(True)
+        bubble.setTextFormat(Qt.TextFormat.RichText)
         bubble.setObjectName("assistantBubble" if role == "assistant" else "userBubble")
         bubble.setMargin(14)
+        bubble.setMinimumWidth(200)
+        bubble.adjustSize()
         item.setSizeHint(bubble.sizeHint())
         self.transcript.addItem(item)
         self.transcript.setItemWidget(item, bubble)
@@ -378,6 +401,21 @@ class EchoMindWindow(QMainWindow):
             border: none;
             padding: 14px 18px;
         }
+        QPushButton#stopSpeakButton {
+            background: rgba(255, 107, 129, 0.15);
+            color: #ff6b81;
+            border: 1px solid rgba(255, 107, 129, 0.35);
+            padding: 14px 18px;
+        }
+        QPushButton#stopSpeakButton:hover {
+            background: rgba(255, 107, 129, 0.30);
+            border-color: rgba(255, 107, 129, 0.6);
+        }
+        QPushButton#stopSpeakButton:disabled {
+            background: rgba(255, 255, 255, 0.03);
+            color: #4a5568;
+            border-color: rgba(255, 255, 255, 0.05);
+        }
         QPushButton[active="true"] {
             background: #ff6b81;
             color: white;
@@ -406,5 +444,25 @@ class EchoMindWindow(QMainWindow):
             border: 1px solid rgba(98, 182, 255, 0.24);
             border-radius: 18px;
             color: #eaf4ff;
+        }
+        QScrollBar:vertical {
+            background: transparent;
+            width: 8px;
+            margin: 4px 0;
+        }
+        QScrollBar::handle:vertical {
+            background: rgba(29, 233, 182, 0.25);
+            border-radius: 4px;
+            min-height: 30px;
+        }
+        QScrollBar::handle:vertical:hover {
+            background: rgba(29, 233, 182, 0.45);
+        }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            height: 0;
+        }
+        QListWidget::item {
+            background: transparent;
+            border: none;
         }
         """

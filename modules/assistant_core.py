@@ -9,7 +9,7 @@ from config.config import ASSISTANT_NAME, LISTEN_RETRY_DELAY_MS, TTS_ENGINE
 from modules.llm_engine import ask_llm
 from modules.speech_to_text import SpeechToTextService
 from modules.task_router import TaskRouter
-from modules.text_to_speech import TextToSpeechService
+from modules import text_to_speech as tts_module
 
 
 class AssistantController(QObject):
@@ -23,13 +23,14 @@ class AssistantController(QObject):
         super().__init__()
         self._router = TaskRouter()
         self._stt = SpeechToTextService()
-        self._tts = TextToSpeechService()
         self._stop_event = Event()
+        self._cmd_done = Event()
+        self._cmd_done.set()
         self._worker: Thread | None = None
 
     @property
     def tts_available(self) -> bool:
-        return self._tts.available
+        return tts_module._SERVICE.available
 
     @property
     def tts_engine_name(self) -> str:
@@ -46,6 +47,10 @@ class AssistantController(QObject):
         self._stop_event.set()
         self.listening_changed.emit(False)
         self.status_changed.emit("Idle")
+
+    def stop_speaking(self) -> None:
+        tts_module.stop_speaking()
+        self.status_changed.emit("Ready")
 
     def submit_text(self, text: str) -> None:
         clean = text.strip()
@@ -70,7 +75,10 @@ class AssistantController(QObject):
                 time.sleep(LISTEN_RETRY_DELAY_MS / 1000)
                 self.status_changed.emit("Listening")
                 continue
-            self._handle_command(result.text)
+            # Wait for command handling + speech to finish before resuming listening
+            self._cmd_done.clear()
+            Thread(target=self._handle_command_and_signal, args=(result.text,), daemon=True).start()
+            self._cmd_done.wait()
             if self._stop_event.is_set():
                 break
             self.status_changed.emit("Listening")
@@ -93,7 +101,7 @@ class AssistantController(QObject):
                 reply = f"{ASSISTANT_NAME} is standing by."
                 self.transcript_added.emit("assistant", reply)
                 self.response_ready.emit(reply)
-                self._tts.speak_async(reply)
+                tts_module.speak_async(reply)
                 self.stop_listening()
                 return
 
@@ -104,7 +112,19 @@ class AssistantController(QObject):
 
         self.transcript_added.emit("assistant", reply)
         self.response_ready.emit(reply)
-        self.status_changed.emit("Speaking" if self._tts.available else "Ready")
-        if self._tts.available:
-            self._tts.speak_async(reply)
-        self.status_changed.emit("Ready")
+        if tts_module._SERVICE.available:
+            self.status_changed.emit("Speaking")
+            done_event = Event()
+            tts_module.speak_async(
+                reply, on_done=lambda: done_event.set()
+            )
+            done_event.wait()
+            self.status_changed.emit("Ready")
+        else:
+            self.status_changed.emit("Ready")
+
+    def _handle_command_and_signal(self, command: str) -> None:
+        try:
+            self._handle_command(command)
+        finally:
+            self._cmd_done.set()
